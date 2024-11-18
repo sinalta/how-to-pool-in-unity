@@ -80,12 +80,15 @@ namespace Pool
                 m_activeInstances.Add(instance);
                 
                 var instanceTransform = instance.transform;
-                
-                instanceTransform.SetParent(parent);
+
+                if (parent != instanceTransform.parent)
+                {
+                    instanceTransform.SetParent(parent);
+                }
+
                 instanceTransform.SetPositionAndRotation(position, rotation);
-                
                 instance.SetActive(true);
-                
+
                 var pooledObject = instance.GetComponent<PooledGameObject>();
                 pooledObject.OnSpawned();
 
@@ -103,9 +106,21 @@ namespace Pool
                 pooledObject.OnDespawned();
                 
                 instance.SetActive(false);
-                
+
                 var instanceTransform = instance.transform;
-                instanceTransform.SetParent(m_container);
+
+#if UNITY_EDITOR
+                if (instanceTransform.parent != m_container)
+                {
+                    instanceTransform.SetParent(m_container);
+                }
+#else
+                if (instanceTransform.parent)
+                {
+                    instanceTransform.SetParent(null);
+                }
+#endif
+                
 
                 m_activeInstances.Remove(instance);
                 m_availableInstances.Push(instance);
@@ -146,7 +161,12 @@ namespace Pool
             {
                 while (Capacity < newSize)
                 {
+#if UNITY_EDITOR
                     var instance = Object.Instantiate(m_settings.Prefab, m_container);
+#else
+                    var instance = Object.Instantiate(m_settings.Prefab);
+#endif
+                    
                     instance.SetActive(false);
 
                     if (!instance.TryGetComponent(out PooledGameObject pooledGameObject))

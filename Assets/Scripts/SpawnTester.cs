@@ -36,7 +36,7 @@ public class SpawnTester : MonoBehaviour
                     m_prefab,
                     Random.onUnitSphere * m_radius,
                     Quaternion.identity,
-                    transform);
+                    null);
             }
         }
     }
