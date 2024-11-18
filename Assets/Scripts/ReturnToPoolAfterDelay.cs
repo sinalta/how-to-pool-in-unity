@@ -13,16 +13,16 @@ public class ReturnToPoolAfterDelay : MonoBehaviour, IPoolable
 
     public void OnSpawned()
     {
-        if (!m_pooledObject)
-        {
-            m_pooledObject = GetComponent<PooledGameObject>();
-        }
-
         m_timer = 0.0f;
     }
 
     public void OnDespawned()
     {
+    }
+
+    private void Start()
+    {
+        m_pooledObject = GetComponent<PooledGameObject>();
     }
 
     private void Update()
