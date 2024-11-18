@@ -180,7 +180,9 @@ namespace Pool
             }
 
             var instance = Object.Instantiate(prefab, position, rotation, parent);
-            Debug.LogWarning($"Attempting to Instantiate {prefab.name} without a valid pool.\nFalling back to default behaviour.\n[{instance.GetInstanceID()}]");
+            Debug.LogWarning($"Attempting to Instantiate {prefab.name} without a valid pool." +
+                             $"\nFalling back to default behaviour." +
+                             $"\n[{instance.GetInstanceID()}]");
             return instance;
         }
 
@@ -196,7 +198,9 @@ namespace Pool
                 pooledGameObject.ReturnToPool();
             }
             
-            Debug.LogWarning($"Attempting to Destroy non-pooled object: [{instance.GetInstanceID()}] {instance.name}.\nFalling back to default behaviour.");
+            Debug.LogWarning($"Attempting to Destroy non-pooled object: " +
+                             $"\n[{instance.GetInstanceID()}] {instance.name}." +
+                             $"\nFalling back to default behaviour.");
             Object.Destroy(instance);
         }
         
