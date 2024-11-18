@@ -20,12 +20,19 @@ namespace Pool
             ReuseOldest
         }
         
+        public enum HibernationStyle
+        {
+            Inactive,
+            Active
+        }
+        
         [Serializable]
         public class SingleObjectPoolSettings
         {
             public GameObject Prefab;
             [Min(1)] public int DefaultSize = 5;
             public DryBehavior DryBehavior = DryBehavior.Expand;
+            public HibernationStyle HibernationStyle = HibernationStyle.Inactive;
         }
         
         /// <summary>
@@ -39,13 +46,15 @@ namespace Pool
             private Stack<GameObject> m_availableInstances;
             private List<GameObject> m_activeInstances;
             private Transform m_container;
+            private Vector3 m_safeSpace;
 
-            public SingleObjectPool(SingleObjectPoolSettings settings, Transform container)
+            public SingleObjectPool(SingleObjectPoolSettings settings, Transform container, Vector3 safeSpace)
             {
                 m_settings = settings;
                 m_availableInstances = new Stack<GameObject>(m_settings.DefaultSize);
                 m_activeInstances = new List<GameObject>(m_settings.DefaultSize);
                 m_container = container;
+                m_safeSpace = safeSpace;
                 
                 Expand(m_settings.DefaultSize);
             }
@@ -53,7 +62,7 @@ namespace Pool
             /// <summary>
             /// Functionally similar to Object.Instantiate, by the time the object is return from this function you can assume it is in an equivalent state.
             /// Invokes PooledGameObject.OnSpawned before returning the instance.
-            /// If the pool is empty, will Instantiate a new one.
+            /// If the pool is empty, will act as specified by the DryBehaviour specified in the settings.
             /// </summary>
             /// <param name="position">World space position for the new object.</param>
             /// <param name="rotation">World space orientation of the new object.</param>
@@ -87,7 +96,11 @@ namespace Pool
                 }
 
                 instanceTransform.SetPositionAndRotation(position, rotation);
-                instance.SetActive(true);
+
+                if (m_settings.HibernationStyle == HibernationStyle.Inactive)
+                {
+                    instance.SetActive(true);
+                }
 
                 var pooledObject = instance.GetComponent<PooledGameObject>();
                 pooledObject.OnSpawned();
@@ -104,10 +117,14 @@ namespace Pool
             {
                 var pooledObject = instance.GetComponent<PooledGameObject>();
                 pooledObject.OnDespawned();
-                
-                instance.SetActive(false);
+
+                if (m_settings.HibernationStyle == HibernationStyle.Inactive)
+                {
+                    instance.SetActive(false);
+                }
 
                 var instanceTransform = instance.transform;
+                instanceTransform.SetPositionAndRotation(m_safeSpace, Quaternion.identity);
 
 #if UNITY_EDITOR
                 if (instanceTransform.parent != m_container)
@@ -162,12 +179,15 @@ namespace Pool
                 while (Capacity < newSize)
                 {
 #if UNITY_EDITOR
-                    var instance = Object.Instantiate(m_settings.Prefab, m_container);
+                    var instance = Object.Instantiate(m_settings.Prefab, m_safeSpace, Quaternion.identity, m_container);
 #else
-                    var instance = Object.Instantiate(m_settings.Prefab);
+                    var instance = Object.Instantiate(m_settings.Prefab, m_safeSpace, Quaternion.identity);
 #endif
-                    
-                    instance.SetActive(false);
+
+                    if (m_settings.HibernationStyle == HibernationStyle.Inactive)
+                    {
+                        instance.SetActive(false);
+                    }
 
                     if (!instance.TryGetComponent(out PooledGameObject pooledGameObject))
                     {
@@ -175,6 +195,7 @@ namespace Pool
                     }
                     
                     pooledGameObject.Initialize(this);
+                    pooledGameObject.OnDespawned();
                     
                     m_availableInstances.Push(instance);
                 }
@@ -186,6 +207,8 @@ namespace Pool
         #region Serialized Fields
         
         [SerializeField] private List<SingleObjectPoolSettings> m_poolSettings = new ();
+        [Space]
+        [SerializeField] private Vector3 m_poolSafeSpace = new (5000.0f, 5000.0f, 5000.0f);
         
         #endregion
 
@@ -253,9 +276,9 @@ namespace Pool
                     transform =
                     {
                         parent = transform
-                    }
+                    },
                 };
-                m_pools.Add(settings.Prefab, new SingleObjectPool(settings, container.transform));
+                m_pools.Add(settings.Prefab, new SingleObjectPool(settings, container.transform, m_poolSafeSpace));
             }
         }
 
