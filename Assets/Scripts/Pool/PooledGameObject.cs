@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+using Unity.Profiling;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace Pool
 {
@@ -10,7 +12,18 @@ namespace Pool
     [DisallowMultipleComponent]
     public class PooledGameObject : MonoBehaviour
     {
+        static readonly ProfilerMarker ONSPAWNED_MARKER = new ("PooledGameObject.OnSpawned");
+        static readonly ProfilerMarker ONSPAWNED_COMPONENTS_MARKER = new ("PooledGameObject.OnSpawned.Components");
+        static readonly ProfilerMarker ONSPAWNED_POOLABLES_MARKER = new ("PooledGameObject.OnSpawned.Poolables");
+        
+        static readonly ProfilerMarker ONDESPAWNED_MARKER = new ("PooledGameObject.OnDespawned");
+        static readonly ProfilerMarker ONDESPAWNED_COMPONENTS_MARKER = new ("PooledGameObject.OnDespawned.Components");
+        static readonly ProfilerMarker ONDESPAWNED_POOLABLES_MARKER = new ("PooledGameObject.OnDespawned.Poolables");
+        
         public GameObjectPoolSystem.SingleObjectPool OwningPool { get; private set; }
+        
+        [Tooltip("These components will be disabled when the instance is in the pool, and re-enabled when removed from the pool.")]
+        [SerializeField] private List<Component> m_syncedComponents = new ();
         
         private List<IPoolable> m_poolables = new(); 
 
@@ -22,17 +35,61 @@ namespace Pool
 
         public void OnSpawned()
         {
-            foreach (var poolable in m_poolables)
+            using var _ = ONSPAWNED_MARKER.Auto();
+
+            using (ONSPAWNED_COMPONENTS_MARKER.Auto())
             {
-                poolable.OnSpawned();
+                foreach (var component in m_syncedComponents)
+                {
+                    switch (component)
+                    {
+                        case Behaviour behaviour:
+                            behaviour.enabled = true;
+                            break;
+
+                        case Renderer renderer:
+                            renderer.enabled = true;
+                            break;
+                    }
+                }
+            }
+
+            using (ONSPAWNED_POOLABLES_MARKER.Auto())
+            {
+                foreach (var poolable in m_poolables)
+                {
+                    poolable.OnSpawned();
+                }
             }
         }
 
         public void OnDespawned()
         {
-            foreach (var poolable in m_poolables)
+            using var _ = ONDESPAWNED_MARKER.Auto();
+
+            using (ONDESPAWNED_POOLABLES_MARKER.Auto())
             {
-                poolable.OnDespawned();
+                foreach (var poolable in m_poolables)
+                {
+                    poolable.OnDespawned();
+                }
+            }
+
+            using (ONDESPAWNED_COMPONENTS_MARKER.Auto())
+            {
+                foreach (var component in m_syncedComponents)
+                {
+                    switch (component)
+                    {
+                        case Behaviour behaviour:
+                            behaviour.enabled = false;
+                            break;
+
+                        case Renderer renderer:
+                            renderer.enabled = false;
+                            break;
+                    }
+                }
             }
         }
 
