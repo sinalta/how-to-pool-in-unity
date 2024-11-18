@@ -6,6 +6,12 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/Menu.unity
+    guid: 6b97e90f1aa2e274e9388691fd035c14
+  - enabled: 1
+    path: Assets/Scenes/Limiter.unity
+    guid: 917c9c5c583c09b40a93acd529d2986b
+  - enabled: 1
     path: Assets/Scenes/HowToPool.unity
     guid: 25dbd902448def44c9a2aec826731999
   m_configObjects: {}

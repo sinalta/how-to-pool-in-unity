@@ -9,9 +9,9 @@ public class SpawnTester : MonoBehaviour
     [SerializeField] private GameObjectPoolSystem m_pool;
     [SerializeField] private GameObject m_prefab;
     [SerializeField] private float m_spawnDelay = 1.0f;
+    [SerializeField] private float m_radius = 5.0f;
 
     private float m_timeUntilSpawn = 0.0f;
-    private int m_spawnCount = 0;
 
     public void SetPrefab(GameObject prefab)
     {
@@ -26,19 +26,17 @@ public class SpawnTester : MonoBehaviour
     private void Update()
     {
         m_timeUntilSpawn -= Time.deltaTime;
-        if (m_timeUntilSpawn < 0.0f)
+        while (m_timeUntilSpawn < 0.0f)
         {
-            m_timeUntilSpawn = m_spawnDelay;
+            m_timeUntilSpawn += m_spawnDelay;
 
             using (SPAWNTESTER_INSTANTIATE.Auto())
             {
                 var instance = m_pool.Instantiate(
                     m_prefab,
-                    Random.onUnitSphere * 5.0f,
+                    Random.onUnitSphere * m_radius,
                     Quaternion.identity,
                     transform);
-
-                ++m_spawnCount;
             }
         }
     }

@@ -13,12 +13,19 @@ namespace Pool
     public class GameObjectPoolSystem : MonoBehaviour
     {
         #region Types
+
+        public enum DryBehavior
+        {
+            Expand,
+            ReuseOldest
+        }
         
         [Serializable]
         public class SingleObjectPoolSettings
         {
             public GameObject Prefab;
             [Min(1)] public int DefaultSize = 5;
+            public DryBehavior DryBehavior = DryBehavior.Expand;
         }
         
         /// <summary>
@@ -30,14 +37,14 @@ namespace Pool
             
             private SingleObjectPoolSettings m_settings;
             private Stack<GameObject> m_availableInstances;
-            private HashSet<GameObject> m_activeInstances;
+            private List<GameObject> m_activeInstances;
             private Transform m_container;
 
             public SingleObjectPool(SingleObjectPoolSettings settings, Transform container)
             {
                 m_settings = settings;
                 m_availableInstances = new Stack<GameObject>(m_settings.DefaultSize);
-                m_activeInstances = new HashSet<GameObject>(m_settings.DefaultSize);
+                m_activeInstances = new List<GameObject>(m_settings.DefaultSize);
                 m_container = container;
                 
                 Expand(m_settings.DefaultSize);
@@ -56,8 +63,17 @@ namespace Pool
             {
                 if (m_availableInstances.Count == 0)
                 {
-                    Expand(Capacity + 1);
-                    Debug.LogWarning($"{m_settings.Prefab.name} pool size increased to {Capacity}");
+                    switch (m_settings.DryBehavior)
+                    {
+                        case DryBehavior.Expand:
+                            Expand(Capacity + 1);
+                            Debug.LogWarning($"{m_settings.Prefab.name} pool size increased to {Capacity}");
+                            break;
+                        
+                        case DryBehavior.ReuseOldest:
+                            ReturnToPool(m_activeInstances[0]);
+                            break;
+                    }
                 }
                 
                 var instance = m_availableInstances.Pop();
