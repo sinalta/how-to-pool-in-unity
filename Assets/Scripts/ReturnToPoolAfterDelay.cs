@@ -14,10 +14,12 @@ public class ReturnToPoolAfterDelay : MonoBehaviour, IPoolable
     public void OnSpawned()
     {
         m_timer = 0.0f;
+        enabled = true;
     }
 
     public void OnDespawned()
     {
+        enabled = false;
     }
 
     private void Start()
